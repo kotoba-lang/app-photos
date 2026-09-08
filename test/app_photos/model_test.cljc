@@ -2,7 +2,7 @@
   (:require [app-photos.model :as model]
             [app-photos.page :as page]
             [app-photos.source :as source]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is testing]]
             [design-quality.audit :as dq]
             [mokuroku.catalog :as catalog]
