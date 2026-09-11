@@ -35,8 +35,8 @@ the wrong slot.
 ## Test
 
 ```sh
-clojure -M:local:test
-clojure -M:lint
+kbb -M:local:test
+kbb -M:lint
 ```
 
 design-quality: 100.00 on album / selection / awaiting-grant (2026-08-03).
