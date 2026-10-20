@@ -1,0 +1,24 @@
+(ns app-photos.orient-parity-test
+  "aiueos/photos_orient.cljk（判定コア）と実物の model.cljk の parity。
+  EXIF orientation・capability 分割・撮影時刻・commands が guest の判定と一致する。"
+  (:require [clojure.test :refer [deftest is testing]]
+            [app-photos.model :as model]))
+
+(deftest orientation-matches-guest
+  (testing "guest test-swap: EXIF orientation 5-8 は幅高さを入れ替える"
+    (is (contains? model/rotated? 5))
+    (is (contains? model/rotated? 8))
+    (is (not (contains? model/rotated? 4)))
+    (is (not (contains? model/rotated? 1)))
+    (is (= [600 800] (model/displayed-dimensions {:width 800 :height 600 :orientation 6})))
+    (is (= [800 600] (model/displayed-dimensions {:width 800 :height 600 :orientation 1}))))
+  (testing "guest test-keep の前提: 寸法が無ければ不明（nil）"
+    (is (nil? (model/displayed-dimensions {:orientation 6})))))
+
+(deftest surface-matches-guest
+  (testing "guest test-grant: fs/browse と image/metadata は分離された 2 capability"
+    (is (= "image/metadata" model/metadata-capability))
+    (is (= "fs/browse" model/browse-capability))
+    (is (not= model/metadata-capability model/browse-capability)))
+  (testing "guest test-command: open / quicklook / copy-path / export"
+    (is (= #{:open :quicklook :copy-path :export} model/commands))))

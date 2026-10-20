@@ -1,0 +1,18 @@
+;; app-photos — itonami（dapp）の aiueos アプリ記述子（notes.edn 形）。
+;; 判定コアは aiueos/photos_orient.cljk（EXIF 向き・capability 分割・撮影時刻）。
+;; 正本は src/app_photos/model.cljk。pure（:effects #{}）。
+{:aiueos/component :app/photos-orient
+ :aiueos/kind :app
+ :aiueos/trust :untrusted
+ :aiueos/source "photos_orient.cljk"
+ :aiueos/wasm "photos_orient.wasm"
+ :aiueos/entry "main"
+ :aiueos/args []
+ :aiueos/imports #{}
+ :aiueos/exports #{:app/main
+                   :app/orientation-swap
+                   :app/grant-judgment
+                   :app/capture-source
+                   :app/command-admissible}
+ :aiueos/effects #{}
+ :aiueos/limits {:memory-pages 16 :fuel 5000000}}

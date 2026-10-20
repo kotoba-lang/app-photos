@@ -1,0 +1,71 @@
+(ns photos.orient
+  "photos 判定コア — itonami dapp bundle（pure, :effects #{}）。
+
+  写真の向き・capability・撮影時刻の判定（正本: src/app_photos/model.cljk）:
+
+  - **EXIF orientation 5-8 は幅高さを入れ替える**。「無視する viewer は縦位置
+    の写真を横位置に報告し、アスペクト比駆動のレイアウトがすべて誤った
+    スロットに置く」。
+  - **2 つの capability は分ける**: fs/browse（ファイル列挙）と
+    image/metadata（EXIF 読み取り）。「フォルダの一覧だけが必要な選択器に
+    すべての写真の撮影場所を読む権限を与えてはならない」。
+  - **撮影時刻は EXIF の capture time を優先**し、無ければファイルの時刻へ
+    フォールバック。
+  - コマンドは open / quicklook / copy-path / export。
+
+  orientation-swap: 1 = 入れ替え（5/6/7/8）/ 0 = そのまま
+  grant-judgment のエラービット（0 = 規則どおり）:
+    1 :over-grant   必要でない capability を付与
+    2 :under-grant  必要なのに付与しない
+  capture-source: 1 = EXIF 由来 / 0 = ファイル時刻由来
+  command-admissible: 1 = 0..3 の内
+
+  実行 host はスカラーのみ = KIR v3 / i64/direct ABI（kernel/selfhost 両対応）。
+
+  テストはゼロ引数 test-*、戻り 1/0:
+  <amu> test aiueos/photos_orient.cljk"
+  (:export [main orientation-swap grant-judgment capture-source
+            command-admissible test-swap test-keep test-grant test-capture
+            test-command test-fail-closed]))
+
+(defn main [] :i64
+  0)
+
+(defn orientation-swap [orientation :i64] :i64
+  (if (and (>= orientation 5) (<= orientation 8)) 1 0))
+
+(defn grant-judgment [needs-browse :i64 needs-exif :i64 granted-browse :i64 granted-exif :i64] :i64
+  (+ (if (and (= granted-browse 1) (= needs-browse 0)) 1 0)
+     (if (and (= granted-exif 1) (= needs-exif 0)) 1 0)
+     (if (and (= needs-browse 1) (= granted-browse 0)) 2 0)
+     (if (and (= needs-exif 1) (= granted-exif 0)) 2 0)))
+
+(defn capture-source [has-exif-time :i64] :i64
+  (if (= has-exif-time 1) 1 0))
+
+(defn command-admissible [cmd :i64] :i64
+  (if (and (>= cmd 0) (<= cmd 3)) 1 0))
+
+;; --- tests（戻り 1 = pass） ------------------------------------------------
+
+(defn test-swap [] :i64
+  ;; orientation 5-8 は入れ替え
+  (if (= (+ (orientation-swap 5) (orientation-swap 8) (orientation-swap 9) (orientation-swap 4)) 2) 1 0))
+
+(defn test-keep [] :i64
+  (if (= (+ (orientation-swap 1) (orientation-swap 3) (orientation-swap 0)) 0) 1 0))
+
+(defn test-grant [] :i64
+  ;; 適正付与は 0。一覧だけの選択器に EXIF を与えない
+  (if (= (+ (grant-judgment 1 0 1 0) (grant-judgment 0 1 0 1) (grant-judgment 1 1 1 1)) 0) 1 0))
+
+(defn test-capture [] :i64
+  ;; EXIF capture time を優先、無ければファイル時刻
+  (if (= (+ (capture-source 1) (capture-source 0)) 1) 1 0))
+
+(defn test-command [] :i64
+  (if (= (+ (command-admissible 0) (command-admissible 3) (command-admissible 4)) 2) 1 0))
+
+(defn test-fail-closed [] :i64
+  ;; 過剰付与はビットが立つ（一覧のみに EXIF 付与 = 1）
+  (if (= (grant-judgment 1 0 1 1) 1) 1 0))
